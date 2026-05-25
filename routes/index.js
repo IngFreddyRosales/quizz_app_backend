@@ -1,6 +1,6 @@
 module.exports = (app) => {
-    // app.use('/api/auth',                require('./auth.route'));
-    require("./user.route")(app);
+    require("./auth.route")(app);
+    // require("./user.route")(app);
     // app.use('/api/user-stats',          require('./userStat.route'));
     require("./category.route")(app);
     // app.use('/api/questions',           require('./question.route'));

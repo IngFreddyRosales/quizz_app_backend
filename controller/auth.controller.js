@@ -2,7 +2,8 @@ const db = require("../model");
 const { generateAuthToken, generatePassword, comparePassword } = require('../utils/auth.utils');
 
 exports.register = async (req, res) => {
-    const { username, email, password } = req.body;
+    try{
+            const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
         return res.status(400).json({ message: "Username, email and password are required" });
@@ -26,6 +27,9 @@ exports.register = async (req, res) => {
     const token = generateAuthToken(user);
 
     res.status(201).json({ token });
+    }catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }   
 };
 
 exports.login = async (req, res) => {
