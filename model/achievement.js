@@ -9,11 +9,6 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         autoIncrement: true,
       },
-      code: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-        unique: true,
-      },
       name: {
         type: DataTypes.STRING(100),
         allowNull: false,
@@ -21,10 +16,6 @@ module.exports = (sequelize, DataTypes) => {
       description: {
         type: DataTypes.TEXT,
         allowNull: false,
-      },
-      icon: {
-        type: DataTypes.TEXT,
-        allowNull: true,
       },
       xp_reward: {
         type: DataTypes.INTEGER,

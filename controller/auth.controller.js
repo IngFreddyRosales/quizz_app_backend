@@ -2,34 +2,47 @@ const db = require("../model");
 const { generateAuthToken, generatePassword, comparePassword } = require('../utils/auth.utils');
 
 exports.register = async (req, res) => {
-    try{
-            const { username, email, password } = req.body;
+    try {
+        const { username, email, password } = req.body;
 
-    if (!username || !email || !password) {
-        return res.status(400).json({ message: "Username, email and password are required" });
-    }
+        if (!username || !email || !password) {
+            return res.status(400).json({ message: "Username, email and password are required" });
+        }
 
-    const existingUser = await db.User.findOne({
-        where: { email }
-    });
+        const existingUser = await db.User.findOne({ where: { email } });
 
-    if (existingUser) {
-        return res.status(400).json({ message: "User with that email already exists" });
-    }
+        if (existingUser) {
+            return res.status(400).json({ message: "User with that email already exists" });
+        }
 
-    const hashedPassword = await generatePassword(password);
-    const user = await db.User.create({     
-        username: username,
-        email: email,
-        password_hash: hashedPassword
-    });
+        const hashedPassword = await generatePassword(password);
 
-    const token = generateAuthToken(user);
+        const user = await db.User.create({
+            username,
+            email,
+            password_hash: hashedPassword
+        });
 
-    res.status(201).json({ token });
-    }catch (error) {
+        await db.UserStat.create({
+            user_id:         user.id,
+            total_xp:        0,
+            level:           1,
+            total_score:     0,
+            games_played:    0,
+            correct_answers: 0,
+            wrong_answers:   0,
+            best_score:      0,
+            current_streak:  0,
+            max_streak:      0,
+        });
+
+        const token = generateAuthToken(user);
+
+        res.status(201).json({ success: true, data: { token } });
+
+    } catch (error) {
         res.status(500).json({ success: false, message: error.message });
-    }   
+    }
 };
 
 exports.login = async (req, res) => {

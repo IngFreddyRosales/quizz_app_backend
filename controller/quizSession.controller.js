@@ -227,6 +227,67 @@ exports.finish = async (req, res) => {
   }
 };
 
+exports.abandon = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const session = await db.QuizSession.findOne({
+      where: { id, user_id: req.user.id, status: "started" },
+    });
+
+    if (!session) {
+      return res.status(404).json({ success: false, message: "Active session not found" });
+    }
+
+    await session.update({ status: "abandoned", finished_at: new Date() });
+
+    res.status(200).json({ success: true, data: session });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const evaluateAchievements = async (user_id, session, stats) => {
+  const allAchievements = await db.Achievement.findAll({ where: { is_active: true } });
+  const alreadyUnlocked = await db.UserAchievement.findAll({ where: { user_id } });
+  const unlockedIds     = alreadyUnlocked.map((ua) => ua.achievement_id);
+  const newlyUnlocked   = [];
+
+  for (const achievement of allAchievements) {
+    if (unlockedIds.includes(achievement.id)) continue;
+
+    let conditionMet = false;
+
+    switch (achievement.condition_type) {
+      case "games_played":
+        conditionMet = stats.games_played >= achievement.condition_value; break;
+      case "correct_answers":
+        conditionMet = stats.correct_answers >= achievement.condition_value; break;
+      case "streak":
+        conditionMet = stats.current_streak >= achievement.condition_value; break;
+      case "perfect_game":
+        conditionMet = session.correct_count === session.total_questions; break;
+    }
+
+    if (conditionMet) {
+      await db.UserAchievement.create({
+        user_id,
+        achievement_id: achievement.id,
+        session_id:     session.id,
+      });
+      newlyUnlocked.push({
+        name:        achievement.name,
+        description: achievement.description,
+        xp_reward:   achievement.xp_reward,
+      });
+    }
+  }
+
+  return newlyUnlocked;
+};
+
+
+
 
 
 
