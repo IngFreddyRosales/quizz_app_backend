@@ -2,15 +2,14 @@ const db = require("../model");
 
 exports.getAll = async (req, res) => {
 	try {
-		const { user_id } = req.query;
-		const resolvedUserId = user_id || req.user?.id;
+      const user_id = req.user?.id;
 
-		if (!resolvedUserId) {
-			return res.status(400).json({ success: false, message: "user_id is required" });
+      if (!user_id) {
+        return res.status(401).json({ success: false, message: "User not authenticated" });
 		}
 
 		const sessions = await db.QuizSession.findAll({
-			where: { user_id: resolvedUserId },
+        where: { user_id },
 			include: [{ model: db.Category, attributes: ["id", "name", "icon"] }],
 			order: [["started_at", "DESC"]],
 		});
