@@ -22,7 +22,12 @@ module.exports = (sequelize, DataTypes) => {
       password_hash: {
         type: DataTypes.TEXT,
         allowNull: false,
-      }
+      },
+      is_admin: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
     },
     { tableName: "users", timestamps: true, createdAt: "created_at", updatedAt: "updated_at" }
   );

@@ -32,4 +32,15 @@ const requiresUser = (req, res, next) => {
     }
 };
 
-module.exports = requiresUser;
+const requiresAdmin = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ message: "Acceso denegado: se requieren privilegios de administrador" });
+    }
+};
+
+module.exports = {
+    requiresUser,
+    requiresAdmin
+};

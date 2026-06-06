@@ -19,6 +19,9 @@ const QuizSession     = require('./quizSession.js')(sequelize, Sequelize.DataTyp
 const QuizAnswer      = require('./quizAnswer.js')(sequelize, Sequelize.DataTypes);
 const Achievement     = require('./achievement.js')(sequelize, Sequelize.DataTypes);
 const UserAchievement = require('./userAchievement.js')(sequelize, Sequelize.DataTypes);
+const Season                = require('./season.js')(sequelize, Sequelize.DataTypes);
+const SeasonUserStat        = require('./seasonUserStat.js')(sequelize, Sequelize.DataTypes);
+const SeasonRankingSnapshot = require('./seasonRankingSnapshot.js')(sequelize, Sequelize.DataTypes);
 
 /** User ↔ UserStat (1:1) **/
 User.hasOne(UserStat, { foreignKey: 'user_id' });
@@ -63,10 +66,28 @@ UserAchievement.belongsTo(Achievement, { foreignKey: 'achievement_id' });
 QuizSession.hasMany(UserAchievement, { foreignKey: 'session_id' });
 UserAchievement.belongsTo(QuizSession, { foreignKey: 'session_id' });
 
+/** Season ↔ SeasonUserStat **/
+Season.hasMany(SeasonUserStat, { foreignKey: 'season_id' });
+SeasonUserStat.belongsTo(Season, { foreignKey: 'season_id' });
+
+/** User ↔ SeasonUserStat **/
+User.hasMany(SeasonUserStat, { foreignKey: 'user_id' });
+SeasonUserStat.belongsTo(User, { foreignKey: 'user_id' });
+
+/** Season ↔ SeasonRankingSnapshot **/
+Season.hasMany(SeasonRankingSnapshot, { foreignKey: 'season_id' });
+SeasonRankingSnapshot.belongsTo(Season, { foreignKey: 'season_id' });
+
+/** User ↔ SeasonRankingSnapshot **/
+User.hasMany(SeasonRankingSnapshot, { foreignKey: 'user_id' });
+SeasonRankingSnapshot.belongsTo(User, { foreignKey: 'user_id' });
+
 module.exports = {
     sequelize,
     User, UserStat, Category,
     Question, QuestionOption,
     QuizSession, QuizAnswer,
-    Achievement, UserAchievement
+    Achievement, UserAchievement,
+    Season, SeasonUserStat, SeasonRankingSnapshot
+
 };
