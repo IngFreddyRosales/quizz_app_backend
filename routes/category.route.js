@@ -1,4 +1,4 @@
-const requiresUser = require('../middleware/requiresUser');
+const { requiresUser } = require('../middleware/requiresUser');
 
 module.exports = (app) => {
 

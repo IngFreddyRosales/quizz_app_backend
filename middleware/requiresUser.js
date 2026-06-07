@@ -33,7 +33,8 @@ const requiresUser = (req, res, next) => {
 };
 
 const requiresAdmin = (req, res, next) => {
-    if (req.user && req.user.role === 'admin') {
+    console.log("Middleware requiresAdmin - req.user:", req.headers['authorization'], req.user);
+    if (req.user.is_admin === true) {
         next();
     } else {
         return res.status(403).json({ message: "Acceso denegado: se requieren privilegios de administrador" });

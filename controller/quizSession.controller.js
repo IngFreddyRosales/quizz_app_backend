@@ -290,11 +290,12 @@ exports.finish = async (req, res) => {
       });
 
       // Preparar datos para el response
+      await seasonStat.reload(); // recarga los valores actualizados
       seasonStats = {
         season_name: activeSeason.name,
-        total_score: seasonStat.total_score + session.score,
-        total_xp: seasonStat.total_xp + session.xp_earned,
-        games_played: seasonStat.games_played + 1,
+        total_score: seasonStat.total_score,
+        total_xp: seasonStat.total_xp,
+        games_played: seasonStat.games_played,
         current_streak: newSeasonStreak,
       };
     }
@@ -307,6 +308,7 @@ exports.finish = async (req, res) => {
       data: {
         session,
         stats: { total_xp: newTotalXp, level: newLevel, current_streak: newStreak },
+        season_stats: seasonStats,
         unlocked_achievements: unlocked,
       },
     });
