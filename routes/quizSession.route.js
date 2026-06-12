@@ -7,7 +7,6 @@ module.exports = (app) => {
     const questionController = require('../controller/question.controller')
 
     router.get('/', requiresUser, controller.getAll);
-    router.get('/questions/:category_id', requiresUser, questionController.getQuestionsByCategory);
     router.get('/:id', requiresUser, controller.getById);
     router.post("/answer", requiresUser, controller.answerQuestion);
     router.post('/:category_id', requiresUser, controller.createQuizSession);
