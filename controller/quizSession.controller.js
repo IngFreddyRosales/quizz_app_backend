@@ -103,11 +103,25 @@ exports.answerQuestion = async (req, res) => {
   try {
     const { session_id, question_id, selected_option_id, response_time_ms } = req.body;
 
-    if (!session_id || !question_id || !selected_option_id) {
-      return res.status(400).json({ success: false, message: "session_id, question_id and selected_option_id are required" });
+    if (session_id == null || question_id == null) {
+      return res.status(400).json({
+        success: false,
+        message: "session_id and question_id are required",
+      });
     }
 
-    // Verificar sesión activa del usuario autenticado
+    let normalizedOptionId = selected_option_id;
+
+    if (
+      normalizedOptionId == null ||
+      normalizedOptionId === "" ||
+      (typeof normalizedOptionId === "string" && normalizedOptionId.trim() === "") ||
+      normalizedOptionId === "null" ||
+      normalizedOptionId === "undefined"
+    ) {
+      normalizedOptionId = null;
+    }
+
     const session = await db.QuizSession.findOne({
       where: { id: session_id, user_id: req.user.id, status: "started" },
     });
@@ -116,57 +130,74 @@ exports.answerQuestion = async (req, res) => {
       return res.status(404).json({ success: false, message: "Active session not found" });
     }
 
-    // Evitar responder la misma pregunta dos veces
     const alreadyAnswered = await db.QuizAnswer.findOne({
       where: { session_id, question_id },
     });
 
     if (alreadyAnswered) {
-      return res.status(400).json({ success: false, message: "Question already answered in this session" });
-    }
-
-    // Verificar que la opción pertenece a la pregunta
-    const option = await db.QuestionOption.findOne({
-      where: { id: selected_option_id, question_id },
-    });
-
-    if (!option) {
-      return res.status(404).json({ success: false, message: "Option not found for this question" });
+      return res.status(400).json({
+        success: false,
+        message: "Question already answered in this session",
+      });
     }
 
     const question = await db.Question.findByPk(question_id);
-    const earned_points = option.is_correct ? question.points_base : 0;
 
-    // Guardar en QuizAnswer
+    if (!question) {
+      return res.status(404).json({
+        success: false,
+        message: "Question not found",
+      });
+    }
+
+    let isCorrect = false;
+    let earnedPoints = 0;
+    let option = null;
+
+    if (normalizedOptionId !== null) {
+      option = await db.QuestionOption.findOne({
+        where: { id: normalizedOptionId, question_id },
+      });
+
+      if (!option) {
+        return res.status(404).json({
+          success: false,
+          message: "Option not found for this question",
+        });
+      }
+
+      isCorrect = option.is_correct;
+      earnedPoints = isCorrect ? question.points_base : 0;
+    }
+
     await db.QuizAnswer.create({
       session_id,
       question_id,
-      selected_option_id,
-      is_correct: option.is_correct,
-      earned_points,
+      selected_option_id: normalizedOptionId,
+      is_correct: isCorrect,
+      earned_points: earnedPoints,
       response_time_ms: response_time_ms || null,
     });
 
-    // Actualizar acumulados en la sesión
     await session.increment({
-      score: earned_points,
-      xp_earned: earned_points,
-      correct_count: option.is_correct ? 1 : 0,
-      wrong_count: option.is_correct ? 0 : 1,
+      score: earnedPoints,
+      xp_earned: earnedPoints,
+      correct_count: isCorrect ? 1 : 0,
+      wrong_count: isCorrect ? 0 : 1,
+    });
+
+    const correctOption = await db.QuestionOption.findOne({
+      where: { question_id, is_correct: true },
+      attributes: ["id", "option_text"],
     });
 
     res.status(200).json({
       success: true,
       data: {
-        is_correct: option.is_correct,
-        earned_points,
-        // Si falló, revela cuál era la correcta
-        correct_option: !option.is_correct
-          ? await db.QuestionOption.findOne({
-            where: { question_id, is_correct: true },
-            attributes: ["id", "option_text"],
-          })
-          : null,
+        is_correct: isCorrect,
+        earned_points: earnedPoints,
+        correct_option: isCorrect ? null : correctOption,
+        unanswered: normalizedOptionId === null,
       },
     });
   } catch (error) {
