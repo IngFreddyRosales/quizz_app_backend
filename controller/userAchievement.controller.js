@@ -11,7 +11,7 @@ exports.getUserAchievements = async (req, res) => {
             include: [
                 {
                     model: db.Achievement,
-                    attributes: ["id", "name", "description", "icon"],
+                    attributes: ["id", "name", "description"],
                 },
             ],
         });

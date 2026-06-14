@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       selected_option_id: {
         type: DataTypes.BIGINT,
-        allowNull: false,
+        allowNull: true,
       },
       is_correct: {
         type: DataTypes.BOOLEAN,

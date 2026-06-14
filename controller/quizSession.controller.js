@@ -103,6 +103,7 @@ exports.answerQuestion = async (req, res) => {
   try {
     const { session_id, question_id, selected_option_id, response_time_ms } = req.body;
 
+    // session_id y question_id siempre requeridos
     if (session_id == null || question_id == null) {
       return res.status(400).json({
         success: false,
@@ -110,8 +111,8 @@ exports.answerQuestion = async (req, res) => {
       });
     }
 
+    // Normalizar cualquier variante de "vacío" a null
     let normalizedOptionId = selected_option_id;
-
     if (
       normalizedOptionId == null ||
       normalizedOptionId === "" ||
@@ -144,16 +145,14 @@ exports.answerQuestion = async (req, res) => {
     const question = await db.Question.findByPk(question_id);
 
     if (!question) {
-      return res.status(404).json({
-        success: false,
-        message: "Question not found",
-      });
+      return res.status(404).json({ success: false, message: "Question not found" });
     }
 
     let isCorrect = false;
     let earnedPoints = 0;
     let option = null;
 
+    // Solo buscar opción si el usuario realmente seleccionó una
     if (normalizedOptionId !== null) {
       option = await db.QuestionOption.findOne({
         where: { id: normalizedOptionId, question_id },
@@ -173,9 +172,9 @@ exports.answerQuestion = async (req, res) => {
     await db.QuizAnswer.create({
       session_id,
       question_id,
-      selected_option_id: normalizedOptionId,
-      is_correct: isCorrect,
-      earned_points: earnedPoints,
+      selected_option_id: normalizedOptionId, // null si no respondió
+      is_correct: isCorrect,                  // false si no respondió
+      earned_points: earnedPoints,            // 0 si no respondió
       response_time_ms: response_time_ms || null,
     });
 
@@ -183,7 +182,7 @@ exports.answerQuestion = async (req, res) => {
       score: earnedPoints,
       xp_earned: earnedPoints,
       correct_count: isCorrect ? 1 : 0,
-      wrong_count: isCorrect ? 0 : 1,
+      wrong_count: isCorrect ? 0 : 1,       // suma 1 si no respondió
     });
 
     const correctOption = await db.QuestionOption.findOne({
@@ -255,6 +254,26 @@ exports.finish = async (req, res) => {
     if (!session) {
       return res.status(404).json({ success: false, message: "Active session not found" });
     }
+
+    const answers = await db.QuizAnswer.findAll({
+      where: { session_id: id },
+      attributes: ["response_time_ms"],
+    });
+
+    const validTimes = answers
+      .map(a => a.response_time_ms)
+      .filter(t => t != null && !Number.isNaN(Number(t)));
+
+    const avgResponseTime =
+      validTimes.length > 0
+        ? Math.round(validTimes.reduce((sum, t) => sum + Number(t), 0) / validTimes.length)
+        : null;
+
+    await session.update({
+      status: "finished",
+      finished_at: new Date(),
+      avg_response_time_ms: avgResponseTime,
+    });
 
     // 1. Cerrar la sesión
     await session.update({ status: "finished", finished_at: new Date() });

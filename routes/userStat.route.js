@@ -7,5 +7,5 @@ module.exports = (app) => {
 
     router.get('/', requiresUser, controller.getUserStats);
 
-    app.use('/user-stats', router);
+    app.use('/user_stats', router);
 }
