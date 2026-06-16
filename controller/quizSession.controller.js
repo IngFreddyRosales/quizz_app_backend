@@ -128,7 +128,7 @@ exports.answerQuestion = async (req, res) => {
     });
 
     if (!session) {
-      return res.status(404).json({ success: false, message: "Active session not found" });
+      return res.status(404).json({ success: false, message: "Session no activa" });
     }
 
     const alreadyAnswered = await db.QuizAnswer.findOne({
@@ -138,7 +138,7 @@ exports.answerQuestion = async (req, res) => {
     if (alreadyAnswered) {
       return res.status(400).json({
         success: false,
-        message: "Question already answered in this session",
+        message: "Question ya respondida",
       });
     }
 
@@ -161,7 +161,7 @@ exports.answerQuestion = async (req, res) => {
       if (!option) {
         return res.status(404).json({
           success: false,
-          message: "Option not found for this question",
+          message: "Option no disponible para esta pregunta",
         });
       }
 

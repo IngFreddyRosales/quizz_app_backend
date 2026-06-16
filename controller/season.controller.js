@@ -13,19 +13,47 @@ exports.getAll = async (req, res) => {
     }
 };
 
-exports.getById = async (req, res) => {
+exports.getTotalScoreByUserId = async (req, res) => {
     try {
-        const { id } = req.params;
+        const userId = req.user?.id;
 
-        const season = await db.Season.findByPk(id);
-
-        if (!season) {
-            return res.status(404).json({ success: false, message: 'Season not found' });
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'User not authenticated',
+            });
         }
 
-        res.status(200).json({ success: true, data: season });
+        const activeSeason = await getActiveSeason();
+
+        if (!activeSeason) {
+            return res.status(404).json({
+                success: false,
+                message: 'No hay temporada activa en este momento',
+            });
+        }
+
+        const seasonUserStat = await db.SeasonUserStat.findOne({
+            where: {
+                user_id: userId,
+                season_id: activeSeason.id,
+            },
+            attributes: ['total_score'],
+            raw: true,
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                season_id: activeSeason.id,
+                total_score: seasonUserStat?.total_score ?? 0,
+            },
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
     }
 };
 
@@ -37,7 +65,7 @@ exports.getCurrentLeaderboard = async (req, res) => {
         if (!activeSeason) {
             return res.status(404).json({
                 success: false,
-                message: 'No active season at the moment',
+                message: 'No hay temporada activa en este momento',
             });
         }
 
@@ -49,30 +77,30 @@ exports.getCurrentLeaderboard = async (req, res) => {
             }],
             order: [
                 ['total_score', 'DESC'],
-                ['total_xp', 'DESC'],   
+                ['total_xp', 'DESC'],
             ],
         });
 
         const ranked = leaderboard.map((entry, index) => ({
-            rank_position:  index + 1,
-            user_id:        entry.user_id,
-            username:       entry.User.username,
-            total_score:    entry.total_score,
-            total_xp:       entry.total_xp,
-            games_played:   entry.games_played,
-            best_score:     entry.best_score,
+            rank_position: index + 1,
+            user_id: entry.user_id,
+            username: entry.User.username,
+            total_score: entry.total_score,
+            total_xp: entry.total_xp,
+            games_played: entry.games_played,
+            best_score: entry.best_score,
             correct_answers: entry.correct_answers,
-            max_streak:     entry.max_streak,
+            max_streak: entry.max_streak,
         }));
 
         res.status(200).json({
             success: true,
             data: {
                 season: {
-                    id:         activeSeason.id,
-                    name:       activeSeason.name,
+                    id: activeSeason.id,
+                    name: activeSeason.name,
                     start_date: activeSeason.start_date,
-                    end_date:   activeSeason.end_date,
+                    end_date: activeSeason.end_date,
                 },
                 leaderboard: ranked,
             },
@@ -107,10 +135,10 @@ exports.getLeaderboard = async (req, res) => {
 
             ranked = snapshots.map((snap) => ({
                 rank_position: snap.rank_position,
-                user_id:       snap.user_id,
-                username:      snap.User.username,
-                total_score:   snap.total_score,
-                total_xp:      snap.total_xp,
+                user_id: snap.user_id,
+                username: snap.User.username,
+                total_score: snap.total_score,
+                total_xp: snap.total_xp,
                 snapshot_date: snap.snapshot_date,
             }));
 
@@ -128,15 +156,15 @@ exports.getLeaderboard = async (req, res) => {
             });
 
             ranked = leaderboard.map((entry, index) => ({
-                rank_position:   index + 1,
-                user_id:         entry.user_id,
-                username:        entry.User.username,
-                total_score:     entry.total_score,
-                total_xp:        entry.total_xp,
-                games_played:    entry.games_played,
-                best_score:      entry.best_score,
+                rank_position: index + 1,
+                user_id: entry.user_id,
+                username: entry.User.username,
+                total_score: entry.total_score,
+                total_xp: entry.total_xp,
+                games_played: entry.games_played,
+                best_score: entry.best_score,
                 correct_answers: entry.correct_answers,
-                max_streak:      entry.max_streak,
+                max_streak: entry.max_streak,
             }));
         }
 
@@ -144,13 +172,36 @@ exports.getLeaderboard = async (req, res) => {
             success: true,
             data: {
                 season: {
-                    id:         season.id,
-                    name:       season.name,
-                    status:     season.status,
+                    id: season.id,
+                    name: season.name,
+                    status: season.status,
                     start_date: season.start_date,
-                    end_date:   season.end_date,
+                    end_date: season.end_date,
                 },
                 leaderboard: ranked,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.getSeasonActive = async (req, res) => {
+    try {
+        const activeSeason = await getActiveSeason();
+        if (!activeSeason) {
+            return res.status(404).json({
+                success: false,
+                message: 'No hay temporada activa en este momento',
+            });
+        }
+        res.status(200).json({
+            success: true,
+            data: {
+                id: activeSeason.id,
+                name: activeSeason.name,
+                start_date: activeSeason.start_date,
+                end_date: activeSeason.end_date,
             },
         });
     } catch (error) {
@@ -188,8 +239,8 @@ exports.create = async (req, res) => {
         const season = await db.Season.create({
             name,
             start_date: new Date(start_date),
-            end_date:   new Date(end_date),
-            status:     'active',   // se crea directamente activa
+            end_date: new Date(end_date),
+            status: 'active',   // se crea directamente activa
         });
 
         res.status(201).json({ success: true, data: season });
@@ -227,11 +278,11 @@ exports.finish = async (req, res) => {
 
         const snapshotDate = new Date();
         const snapshots = leaderboard.map((entry, index) => ({
-            season_id:     id,
-            user_id:       entry.user_id,
+            season_id: id,
+            user_id: entry.user_id,
             rank_position: index + 1,
-            total_score:   entry.total_score,
-            total_xp:      entry.total_xp,
+            total_score: entry.total_score,
+            total_xp: entry.total_xp,
             snapshot_date: snapshotDate,
         }));
 
@@ -243,10 +294,10 @@ exports.finish = async (req, res) => {
             success: true,
             message: `Season "${season.name}" finished successfully`,
             data: {
-                season_id:      season.id,
-                season_name:    season.name,
-                total_players:  snapshots.length,
-                snapshot_date:  snapshotDate,
+                season_id: season.id,
+                season_name: season.name,
+                total_players: snapshots.length,
+                snapshot_date: snapshotDate,
                 top_3: snapshots.slice(0, 3),
             },
         });
