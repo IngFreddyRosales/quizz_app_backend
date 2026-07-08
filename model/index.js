@@ -23,62 +23,48 @@ const Season                = require('./season.js')(sequelize, Sequelize.DataTy
 const SeasonUserStat        = require('./seasonUserStat.js')(sequelize, Sequelize.DataTypes);
 const SeasonRankingSnapshot = require('./seasonRankingSnapshot.js')(sequelize, Sequelize.DataTypes);
 
-/** User ↔ UserStat (1:1) **/
 User.hasOne(UserStat, { foreignKey: 'user_id' });
 UserStat.belongsTo(User, { foreignKey: 'user_id' });
 
-/** User ↔ QuizSession **/
 User.hasMany(QuizSession, { foreignKey: 'user_id' });
 QuizSession.belongsTo(User, { foreignKey: 'user_id' });
 
-/** Category ↔ Question **/
 Category.hasMany(Question, { foreignKey: 'category_id' });
 Question.belongsTo(Category, { foreignKey: 'category_id' });
 
-/** Category ↔ QuizSession **/
 Category.hasMany(QuizSession, { foreignKey: 'category_id' });
 QuizSession.belongsTo(Category, { foreignKey: 'category_id' });
 
-/** Question ↔ QuestionOption **/
 Question.hasMany(QuestionOption, { foreignKey: 'question_id' });
 QuestionOption.belongsTo(Question, { foreignKey: 'question_id' });
 
-/** QuizSession ↔ QuizAnswer **/
 QuizSession.hasMany(QuizAnswer, { foreignKey: 'session_id' });
 QuizAnswer.belongsTo(QuizSession, { foreignKey: 'session_id' });
 
-/** Question ↔ QuizAnswer **/
 Question.hasMany(QuizAnswer, { foreignKey: 'question_id' });
 QuizAnswer.belongsTo(Question, { foreignKey: 'question_id' });
 
-/** QuestionOption ↔ QuizAnswer **/
 QuestionOption.hasMany(QuizAnswer, { foreignKey: 'selected_option_id' });
 QuizAnswer.belongsTo(QuestionOption, { foreignKey: 'selected_option_id' });
 
-/** User ↔ Achievement (N:M via UserAchievement) **/
 User.hasMany(UserAchievement, { foreignKey: 'user_id' });
 UserAchievement.belongsTo(User, { foreignKey: 'user_id' });
 
 Achievement.hasMany(UserAchievement, { foreignKey: 'achievement_id' });
 UserAchievement.belongsTo(Achievement, { foreignKey: 'achievement_id' });
 
-/** QuizSession ↔ UserAchievement **/
 QuizSession.hasMany(UserAchievement, { foreignKey: 'session_id' });
 UserAchievement.belongsTo(QuizSession, { foreignKey: 'session_id' });
 
-/** Season ↔ SeasonUserStat **/
 Season.hasMany(SeasonUserStat, { foreignKey: 'season_id' });
 SeasonUserStat.belongsTo(Season, { foreignKey: 'season_id' });
 
-/** User ↔ SeasonUserStat **/
 User.hasMany(SeasonUserStat, { foreignKey: 'user_id' });
 SeasonUserStat.belongsTo(User, { foreignKey: 'user_id' });
 
-/** Season ↔ SeasonRankingSnapshot **/
 Season.hasMany(SeasonRankingSnapshot, { foreignKey: 'season_id' });
 SeasonRankingSnapshot.belongsTo(Season, { foreignKey: 'season_id' });
 
-/** User ↔ SeasonRankingSnapshot **/
 User.hasMany(SeasonRankingSnapshot, { foreignKey: 'user_id' });
 SeasonRankingSnapshot.belongsTo(User, { foreignKey: 'user_id' });
 

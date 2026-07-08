@@ -9,7 +9,6 @@ exports.getQuestionsByCategory = async (req, res) => {
 			return res.status(400).json({ success: false, message: "category_id is required" });
 		}
 
-		// verificar si el id de categoria existe
 		const category = await db.Category.findOne({
 			where: { id: category_id },
 		});
