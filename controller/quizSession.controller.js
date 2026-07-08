@@ -148,12 +148,13 @@ exports.answerQuestion = async (req, res) => {
       return res.status(404).json({ success: false, message: "Question not found" });
     }
 
+    const isUnanswered = normalizedOptionId === null;
     let isCorrect = false;
     let earnedPoints = 0;
     let option = null;
 
     // Solo buscar opción si el usuario realmente seleccionó una
-    if (normalizedOptionId !== null) {
+    if (!isUnanswered) {
       option = await db.QuestionOption.findOne({
         where: { id: normalizedOptionId, question_id },
       });
@@ -166,23 +167,35 @@ exports.answerQuestion = async (req, res) => {
       }
 
       isCorrect = option.is_correct;
-      earnedPoints = isCorrect ? question.points_base : 0;
+
+      // points_base ahora es multiplicador de dificultad (no valor crudo)
+      // easy = x1, medium = x2, hard = x3
+      const difficultyMultiplier =
+        question.difficulty === "hard" ? 3 :
+        question.difficulty === "medium" ? 2 : 1;
+
+      earnedPoints = isCorrect ? question.points_base * difficultyMultiplier : 0;
     }
 
     await db.QuizAnswer.create({
       session_id,
       question_id,
       selected_option_id: normalizedOptionId, // null si no respondió
-      is_correct: isCorrect,                  // false si no respondió
-      earned_points: earnedPoints,            // 0 si no respondió
+      is_correct: isCorrect,                  // false si no respondió (y si respondió mal)
+      earned_points: earnedPoints,            // 0 si no respondió o falló
       response_time_ms: response_time_ms || null,
     });
 
+    // Ahora los tres contadores son mutuamente excluyentes:
+    //  - correcta        -> correct_count++
+    //  - incorrecta      -> wrong_count++
+    //  - sin responder   -> unanswered_count++
     await session.increment({
       score: earnedPoints,
       xp_earned: earnedPoints,
-      correct_count: isCorrect ? 1 : 0,
-      wrong_count: isCorrect ? 0 : 1,       // suma 1 si no respondió
+      correct_count:    isCorrect ? 1 : 0,
+      wrong_count:      !isCorrect && !isUnanswered ? 1 : 0,
+      unanswered_count: isUnanswered ? 1 : 0,
     });
 
     const correctOption = await db.QuestionOption.findOne({

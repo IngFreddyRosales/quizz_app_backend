@@ -42,6 +42,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 0,
       },
+      unanswered_count: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
       total_questions: {
         type: DataTypes.INTEGER,
         allowNull: false,
