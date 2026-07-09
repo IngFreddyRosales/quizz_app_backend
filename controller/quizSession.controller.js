@@ -148,10 +148,28 @@ exports.answerQuestion = async (req, res) => {
       return res.status(404).json({ success: false, message: "Question not found" });
     }
 
+    // ── Racha en vivo: calculada por el backend (fuente de verdad) ──
+    // Leemos las respuestas ya guardadas de esta sesion, mas reciente primero.
+    // Nunca confiamos en un streak_multiplier enviado por el cliente.
+    const previousAnswers = await db.QuizAnswer.findAll({
+      where: { session_id },
+      order: [["answered_at", "DESC"]],
+      attributes: ["is_correct"],
+    });
+
+    // Contar correctas consecutivas desde la mas reciente hacia atras.
+    // Cualquier incorrecta o sin responder (is_correct = false) rompe el conteo.
+    let streakBefore = 0;
+    for (const ans of previousAnswers) {
+      if (ans.is_correct) streakBefore++;
+      else break;
+    }
+
     const isUnanswered = normalizedOptionId === null;
     let isCorrect = false;
     let earnedPoints = 0;
     let option = null;
+    let streakMultiplier = 1; // por defecto x1
 
     // Solo buscar opción si el usuario realmente seleccionó una
     if (!isUnanswered) {
@@ -174,8 +192,18 @@ exports.answerQuestion = async (req, res) => {
         question.difficulty === "hard" ? 3 :
         question.difficulty === "medium" ? 2 : 1;
 
-      earnedPoints = isCorrect ? question.points_base * difficultyMultiplier : 0;
+      if (isCorrect) {
+        // Cada 3 correctas seguidas previas (3, 6, 9...) activan bonus x1.5
+        // en la pregunta actual. Se rompe con cualquier fallo o sin responder.
+        streakMultiplier = (streakBefore > 0 && streakBefore % 3 === 0) ? 1.5 : 1;
+        earnedPoints = Math.round(
+          question.points_base * difficultyMultiplier * streakMultiplier
+        );
+      }
     }
+
+    // Racha resultante DESPUES de esta respuesta (para que el front la muestre)
+    const currentStreakInSession = isCorrect ? streakBefore + 1 : 0;
 
     await db.QuizAnswer.create({
       session_id,
@@ -210,6 +238,8 @@ exports.answerQuestion = async (req, res) => {
         earned_points: earnedPoints,
         correct_option: isCorrect ? null : correctOption,
         unanswered: normalizedOptionId === null,
+        streak_multiplier: streakMultiplier,               // 1 o 1.5
+        current_streak_in_session: currentStreakInSession, // racha viva tras esta respuesta
       },
     });
   } catch (error) {
